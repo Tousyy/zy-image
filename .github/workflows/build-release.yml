@@ -1,0 +1,50 @@
+name: build-release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - run: npm run binary
+      - run: npm run smoke:binary
+      - id: platform
+        shell: bash
+        run: echo "name=zy-image-mcp-$(node -p 'process.platform')-$(node -p 'process.arch')" >> "$GITHUB_OUTPUT"
+      - shell: pwsh
+        run: Compress-Archive -Path "release/${{ steps.platform.outputs.name }}" -DestinationPath "release/${{ steps.platform.outputs.name }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.platform.outputs.name }}
+          path: release/${{ steps.platform.outputs.name }}.zip
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" artifacts/**/*.zip --generate-notes
