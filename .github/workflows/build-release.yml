@@ -29,8 +29,12 @@ jobs:
       - id: platform
         shell: bash
         run: echo "name=zy-image-mcp-$(node -p 'process.platform')-$(node -p 'process.arch')" >> "$GITHUB_OUTPUT"
-      - shell: pwsh
+      - if: runner.os == 'Windows'
+        shell: pwsh
         run: Compress-Archive -Path "release/${{ steps.platform.outputs.name }}" -DestinationPath "release/${{ steps.platform.outputs.name }}.zip"
+      - if: runner.os != 'Windows'
+        shell: bash
+        run: cd release && zip -r "${{ steps.platform.outputs.name }}.zip" "${{ steps.platform.outputs.name }}"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.platform.outputs.name }}
