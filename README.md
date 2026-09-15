@@ -71,6 +71,10 @@ Apple Developer ID 对可执行文件签名并完成 notarization。
 `gpt-image-2.5-sunburst`。详细验证状态见
 [docs/CAPABILITIES.md](docs/CAPABILITIES.md)。
 
+`quality=low` 表示接口的质量档位，不是对画面效果的主观评价。当前上游线路对
+2.5 Flare/Sunburst 明确只接受 `low`；`gpt-image-2` 支持
+`auto`、`low`、`medium`、`high`，且 `high` 已真实请求成功。
+
 生成式编辑不能承诺商品标签、Logo 或小字逐像素不变。对这类商业素材，应提供
 精确蒙版，或在生成背景后把原商品像素本地合成回去。
 

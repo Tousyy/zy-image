@@ -1,7 +1,7 @@
 import { fetch, FormData, Headers, type Dispatcher, type RequestInit, type Response } from "undici";
 import { classifyApiError, sanitizeErrorText, ZyApiError } from "./errors.js";
 import { loadImageSource, type LoadedImage } from "./image-files.js";
-import type { ImageModel } from "./contracts.js";
+import type { ImageModel, ImageQuality } from "./contracts.js";
 
 export interface ApiImage {
   bytes: Buffer;
@@ -14,7 +14,7 @@ export interface GenerateRequest {
   prompt: string;
   size: string;
   n: number;
-  quality: "low";
+  quality: ImageQuality;
   outputFormat: "png" | "jpeg" | "webp";
 }
 

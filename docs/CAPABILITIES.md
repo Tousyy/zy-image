@@ -13,17 +13,19 @@ zy-api 当前没有可查到的公开 OpenAPI/schema 文档，因此不能把未
 | 模型 | MCP 默认用途 | 验证状态 |
 | --- | --- | --- |
 | `gpt-image-2` | 手动选择 | models 接口已列出 |
-| `gpt-image-2.5-flare` | 纯文字生图 | models 接口已列出 |
-| `gpt-image-2.5-sunburst` | 编辑/多参考图 | `quality=low` 的真实编辑请求成功 |
+| `gpt-image-2.5-flare` | 纯文字生图 | `quality=low` 真实生成成功 |
+| `gpt-image-2.5-sunburst` | 编辑/多参考图 | `quality=low` 的真实编辑、多参考、批量请求成功 |
 
-Sunburst 的真实编辑请求中，`quality=high` 被 zy-api 明确拒绝并返回其只支持
-`low`。由于 zy-api 没有公开其它模型的参数契约，MCP 统一只暴露
-`quality=low`，避免对用户余额做试错。
+参考项目 v0.3.1 声明 GPT Image 2.5 支持到 `max`，但 2026-09-15 使用完整
+prompt 对当前 micuapi 上游真实请求时，Flare `max` 和 Sunburst `high` 均被明确
+拒绝为“GPT Image 2.5 supports only 'low'”。同日 `gpt-image-2` 的 `high` 请求
+真实成功。本项目以当前线路实际响应为准，按模型分别校验。
 
 ## MCP 保守规则
 
 - 模型只能是上表三种。
-- `quality` 只能是 `low`。
+- `gpt-image-2` 的 `quality`：`auto`、`low`、`medium`、`high`。
+- 2.5 Flare/Sunburst 的 `quality`：当前只允许 `low`。
 - `output_format`：`png`、`jpeg`、`webp`。
 - 尺寸格式：`WIDTHxHEIGHT`，宽高为 16 的倍数。
 - 单边范围：256-3840；宽高比不超过 3:1。

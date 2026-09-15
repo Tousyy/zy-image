@@ -35,7 +35,7 @@ export function classifyApiError(status: number, rawMessage: string): PublicErro
     suggestedChanges.push("Check that ZY_API_KEY is valid and allowed to use image models.");
   } else if (lower.includes("quality")) {
     code = "invalid_quality";
-    suggestedChanges.push("Retry with quality='low'; zy-image-mcp only exposes this verified value.");
+    suggestedChanges.push("Retry with quality='low' for GPT Image 2.5. The current upstream route accepts auto/low/medium/high for gpt-image-2.");
   } else if (lower.includes("size") || lower.includes("dimension")) {
     code = "invalid_size";
     suggestedChanges.push("Retry with 1024x1024, 1536x1024, or 1024x1536.");

@@ -16,6 +16,8 @@
     "bundle": "esbuild src/index.ts --bundle --platform=node --format=cjs --target=node20 --outfile=build/sea.cjs",
     "binary": "npm run bundle && node scripts/build-binary.mjs",
     "check": "tsc -p tsconfig.json --noEmit",
+    "smoke:live": "node scripts/live-mcp-smoke.mjs",
+    "smoke:quality": "node scripts/live-quality-smoke.mjs",
     "smoke:binary": "node scripts/smoke-stdio.mjs",
     "test": "node --test --import tsx 'test/**/*.test.ts'",
     "probe": "node scripts/probe-capabilities.mjs",

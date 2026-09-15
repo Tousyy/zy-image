@@ -33,6 +33,7 @@ function run(command, args) {
 }
 
 run(process.execPath, ["--experimental-sea-config", seaConfig]);
+await rm(output, { force: true });
 await copyFile(process.execPath, output);
 if (process.platform !== "win32") await chmod(output, 0o755);
 

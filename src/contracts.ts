@@ -13,7 +13,7 @@ export const MODEL_CAPABILITIES = {
     generate: true,
     edit: true,
     defaultFor: [] as string[],
-    quality: ["low"] as const,
+    quality: ["auto", "low", "medium", "high"] as const,
     status: "advertised_by_zy_api",
   },
   "gpt-image-2.5-flare": {
@@ -33,9 +33,17 @@ export const MODEL_CAPABILITIES = {
 } as const;
 
 export const ModelSchema = z.enum(MODELS);
-export const QualitySchema = z.literal("low").default("low").describe(
-  "zy-api's currently verified quality value. Other values are intentionally rejected locally.",
+export const QualitySchema = z.enum(["auto", "low", "medium", "high"]).default("low").describe(
+  "Quality value. On the current upstream route, gpt-image-2 supports auto/low/medium/high while both GPT Image 2.5 models accept only low.",
 );
+
+export type ImageQuality = z.infer<typeof QualitySchema>;
+
+export function validateQuality(model: ImageModel, quality: ImageQuality): void {
+  if (model !== "gpt-image-2" && quality !== "low") {
+    throw new Error(`Model ${model} accepts only quality low on the current upstream route.`);
+  }
+}
 
 export const SizeSchema = z.string().default("1024x1024").describe(
   "WIDTHxHEIGHT. Each edge must be divisible by 16, <=3840, aspect ratio <=3:1, and total pixels 655360..8294400.",

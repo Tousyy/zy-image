@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { MODEL_CAPABILITIES, MODELS, ModelSchema, OutputFormatSchema, parseAndValidateSize, QualitySchema, SizeSchema, validateCount, type ImageModel } from "./contracts.js";
+import { MODEL_CAPABILITIES, MODELS, ModelSchema, OutputFormatSchema, parseAndValidateSize, QualitySchema, SizeSchema, validateCount, validateQuality, type ImageModel } from "./contracts.js";
 import type { Config } from "./config.js";
 import { ZyApiError } from "./errors.js";
 import { loadImageSource, pngDimensions } from "./image-files.js";
@@ -85,7 +85,7 @@ function requireKey(provider: KeyProvider): string {
 export function createMcpServer(config: Config, keyProvider: KeyProvider): McpServer {
   const server = new McpServer({ name: "zy-image-mcp", version: "0.1.0" }, {
     capabilities: { logging: {} },
-    instructions: "Use server_info before the first image task. The conversation model should interpret the user's visual goal, preserve exact text/invariants, then call image_generate for no references, image_edit for one image, image_multi_reference for 2-10 references, or image_batch_edit for the same edit on multiple independent images. Only quality='low' is currently verified on zy-api. Always inspect saved.actual_size and size_honored. Upstream errors are structured; correct parameters and retry only when error.retryable or suggested_changes says so. Never ask users to paste keys into tool arguments.",
+    instructions: "Use server_info before the first image task. The conversation model should interpret the user's visual goal, preserve exact text/invariants, then call image_generate for no references, image_edit for one image, image_multi_reference for 2-10 references, or image_batch_edit for the same edit on multiple independent images. Current upstream quality matrix: gpt-image-2 supports auto/low/medium/high; both GPT Image 2.5 models accept only low. Always inspect saved.actual_size and size_honored. Upstream errors are structured; correct parameters and retry only when error.retryable or suggested_changes says so. Never ask users to paste keys into tool arguments.",
   });
 
   server.registerTool("server_info", {
@@ -109,7 +109,7 @@ export function createMcpServer(config: Config, keyProvider: KeyProvider): McpSe
       verification: {
         models_listed_by_zy_api: true,
         sunburst_low_edit_live_verified: "2026-09-15",
-        higher_quality_values: "not exposed because zy-api rejected sunburst high and has no public model contract",
+        quality_matrix_source: "live upstream checks on 2026-09-15 override the reference repository: gpt-image-2 high succeeded; both GPT Image 2.5 models explicitly rejected non-low values",
         exact_output_dimensions: "not guaranteed by gateway; inspect size_honored",
       },
     };
@@ -133,6 +133,7 @@ export function createMcpServer(config: Config, keyProvider: KeyProvider): McpSe
   }, async (args) => {
     try {
       const size = parseAndValidateSize(args.size);
+      validateQuality(args.model, args.quality);
       validateCount(args.n, size);
       const client = new ZyApiClient({ baseUrl: config.baseUrl, apiKey: requireKey(keyProvider), timeoutMs: config.timeoutMs, dispatcher: config.dispatcher });
       const images = await client.generate({ model: args.model, prompt: args.prompt, size: size.normalized, n: args.n, quality: args.quality, outputFormat: args.output_format });
@@ -160,6 +161,7 @@ export function createMcpServer(config: Config, keyProvider: KeyProvider): McpSe
   }, async (args) => {
     try {
       const size = parseAndValidateSize(args.size);
+      validateQuality(args.model, args.quality);
       const options = { allowLocal: true, inputRoot: config.inputRoot, dispatcher: config.dispatcher, timeoutMs: config.timeoutMs };
       const image = await loadImageSource(args.image_source, options);
       const mask = args.mask_source ? await loadImageSource(args.mask_source, options) : undefined;
@@ -194,12 +196,14 @@ export function createMcpServer(config: Config, keyProvider: KeyProvider): McpSe
   }, async (args) => {
     try {
       const size = parseAndValidateSize(args.size);
+      validateQuality(args.model, args.quality);
       const options = { allowLocal: true, inputRoot: config.inputRoot, dispatcher: config.dispatcher, timeoutMs: config.timeoutMs };
       const imagesIn = await Promise.all(args.image_sources.map((source) => loadImageSource(source, options)));
       const total = imagesIn.reduce((sum, image) => sum + image.bytes.length, 0);
       if (total > 80 * 1024 * 1024) throw new Error("Combined reference images exceed the 80 MB safety limit.");
       const client = new ZyApiClient({ baseUrl: config.baseUrl, apiKey: requireKey(keyProvider), timeoutMs: config.timeoutMs, dispatcher: config.dispatcher });
-      const images = await client.edit({ model: args.model, prompt: args.prompt, size: size.normalized, quality: args.quality, outputFormat: args.output_format, images: imagesIn });
+      const fullPrompt = `Reference images are provided. Synthesize their visual elements (style, palette, composition, subjects) into ONE single new image per the instruction below. Do NOT collage, tile, or montage the references side-by-side unless explicitly asked.\n\nInstruction:\n${args.prompt}`;
+      const images = await client.edit({ model: args.model, prompt: fullPrompt, size: size.normalized, quality: args.quality, outputFormat: args.output_format, images: imagesIn });
       return await finalize(images, { requestedSize: size.normalized, model: args.model, basename: args.basename, inline: args.inline_image }, config);
     } catch (error) { return toolError(error); }
   });
@@ -221,6 +225,7 @@ export function createMcpServer(config: Config, keyProvider: KeyProvider): McpSe
   }, async (args) => {
     try {
       const size = parseAndValidateSize(args.size);
+      validateQuality(args.model, args.quality);
       const key = requireKey(keyProvider);
       const client = new ZyApiClient({ baseUrl: config.baseUrl, apiKey: key, timeoutMs: config.timeoutMs, dispatcher: config.dispatcher });
       const options = { allowLocal: true, inputRoot: config.inputRoot, dispatcher: config.dispatcher, timeoutMs: config.timeoutMs };
