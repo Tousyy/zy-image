@@ -4,7 +4,7 @@ $architecture = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } else { 
 $binaryName = "zy-image-mcp-win32-$architecture.exe"
 $binary = Join-Path $PSScriptRoot $binaryName
 if (-not (Test-Path -LiteralPath $binary -PathType Leaf)) {
-  throw "安装包内缺少 $binaryName。请使用与本机处理器匹配的安装包。"
+  throw "Installer package is missing $binaryName. Use the package matching this computer's architecture."
 }
 
 $installDir = Join-Path $env:LOCALAPPDATA "zy-image-mcp\bin"
@@ -13,14 +13,14 @@ New-Item -ItemType Directory -Force -Path $installDir, $configDir | Out-Null
 $target = Join-Path $installDir "zy-image-mcp.exe"
 Copy-Item -Force -LiteralPath $binary -Destination $target
 
-$secure = Read-Host "请输入 zy-api Key" -AsSecureString
+$secure = Read-Host "Enter zy-api Key" -AsSecureString
 $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
 try {
   $apiKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
 } finally {
   [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
 }
-if ([string]::IsNullOrWhiteSpace($apiKey)) { throw "Key 不能为空" }
+if ([string]::IsNullOrWhiteSpace($apiKey)) { throw "Key cannot be empty." }
 [IO.File]::WriteAllText((Join-Path $configDir "api-key"), $apiKey + [Environment]::NewLine)
 $apiKey = $null
 
@@ -36,7 +36,7 @@ function Write-CodexConfig {
 
   $hasManagedBlock = $existing.Contains($beginMarker)
   if (-not $hasManagedBlock -and $existing -match '(?m)^\[mcp_servers\.zy-image\]\s*$') {
-    throw "检测到已有的 zy-image MCP 配置，未覆盖：$codexConfig"
+    throw "An existing zy-image MCP configuration was found. It was not overwritten: $codexConfig"
   }
 
   $pattern = "(?ms)^" + [regex]::Escape($beginMarker) + ".*?^" + [regex]::Escape($endMarker) + "\r?\n?"
@@ -62,10 +62,10 @@ if ($codex) {
 }
 if (-not $configured) {
   Write-CodexConfig
-  Write-Host "安装完成：已写入 $env:USERPROFILE\.codex\config.toml。"
+  Write-Host "Installation complete. Wrote $env:USERPROFILE\.codex\config.toml"
 } else {
-  Write-Host "安装完成：已自动配置 Codex CLI、IDE 扩展和 ChatGPT 桌面端共享的 MCP。"
+  Write-Host "Installation complete. Configured the zy-image MCP through Codex CLI."
 }
 
-Write-Host "图片默认保存到：$env:USERPROFILE\Pictures\zy-image-out"
-Write-Host "请完全退出并重新打开 Codex 或 ChatGPT 桌面端。"
+Write-Host "Images are saved by default to: $env:USERPROFILE\Pictures\zy-image-out"
+Write-Host "Please fully exit and restart Codex or ChatGPT Desktop before using the MCP."
